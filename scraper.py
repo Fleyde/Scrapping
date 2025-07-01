@@ -56,7 +56,8 @@ class Scraper():
         match = re.findall(r"http[s]?://[^/]+", url_address)
 
         if not match:
-            self.log(f"[Info] Error while extracting the base URL from the address '{url_address}'.")
+            self.log(f"[INFO] Failed to extract the base URL from the address '{url_address}'.")
+
 
         url_base = re.findall(r"http[s]?://[^/]+", url_address)[0]
 
@@ -76,14 +77,14 @@ class Scraper():
         response = requests.get(self.mainAddress, verify=False)     # Change the verify value !!! Just for test here
 
         if response.status_code != 200:
-            self.log("[ERROR] This site doesn't allow scrapping. Please check the status code for more informations : {response.status_code}")
+            self.log(f"[ERROR] This site does not allow scraping. Please check the status code for more information: {response.status_code}")
             return []
         
         soup = BeautifulSoup(response.content, "html.parser")
         hrefs = [a['href'] for a in soup.find_all('a', href=True, class_=self.productsKey)]
         hrefs = self.complete_url_with_base(self.mainAddress, hrefs)
         hrefs = list(set(hrefs))
-        self.log(f"\n[INFO] Getting informations from the main page : {len(hrefs)} links were found on this page according to the given parameters")
+        self.log(f"\n[INFO] Retrieving information from the main page: {len(hrefs)} links were found using the provided parameters.")
 
         return hrefs
 
@@ -107,6 +108,7 @@ class Scraper():
                     writer.writerow(['Product Title', 'Price', 'Description', 'Product URL', 'Scrapping date'])
 
                 for link in hrefs:
+                    self.log(f"\n[INFO] Scraping URL : {link}")
                     response = requests.get(link, verify=False)
 
                     if response.status_code != 200:
@@ -122,6 +124,11 @@ class Scraper():
                         price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
                         description = soup.find(self.descriptionTag, class_=self.descriptionClass).get_text(separator=' ', strip=True)
 
+                        self.log(f"[INFO] Information found : ")
+                        self.log(f"         → Product title : {productTitle}")
+                        self.log(f"         → Product price : {price}")
+                        self.log(f"         → Product description : {description[:500]}")
+
                         writer.writerow([productTitle, price, description, link, date.today().isoformat()])
 
                         # if self.dbPath:
@@ -130,7 +137,7 @@ class Scraper():
                         #     self.conn.commit()
 
                     except AttributeError:
-                        self.log("[INFO] Error with the link {link}\n  → You might have to do it manually")
+                        self.log("[ERROR] /!\ Error with this link ...\n  →  You might need to handle it manually")
                         links_error_count += 1
                         continue
 
@@ -140,6 +147,7 @@ class Scraper():
 
         else:
             for link in hrefs:
+                self.log(f"\n[INFO] Scraping URL : {link}")
                 response = requests.get(link, verify=False)
 
                 if response.status_code != 200:
@@ -155,13 +163,18 @@ class Scraper():
                     price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
                     description = soup.find(self.descriptionTag, class_=self.descriptionClass).get_text(separator=' ', strip=True)
 
+                    self.log(f"[INFO] Information found : ")
+                    self.log(f"         → Product title : {productTitle}")
+                    self.log(f"         → Product price : {price}")
+                    self.log(f"         → Product description : {description[:500]}")
+                    
                     # if self.dbPath:
                     #     self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
                     #                     VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
                     #     self.conn.commit()
 
                 except AttributeError:
-                    self.log("[INFO] Error with the link {link}\n  → You might have to do it manually")
+                    self.log("[ERROR] /!\ Error with this link ...\n  →  You might need to handle it manually")
                     links_error_count += 1
                     continue
 
@@ -170,9 +183,9 @@ class Scraper():
                 time.sleep(delay)
 
 
-        self.log(f"[Info] Task complete successfully")
-        self.log(f"[Info]    → {links_error_count} errors were detected. ")
-        self.log("Data were automatically save in the provided files. If no file were precised, nothing has been saved.")
+        self.log(f"\n\n[INFO] Task completed successfully.")
+        self.log(f"[INFO]    → {links_error_count} errors were encountered.")
+        self.log("[INFO] Data has been automatically saved to the specified files. If no file was provided, nothing has been saved.")
 
 
 

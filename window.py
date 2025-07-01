@@ -9,8 +9,8 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.geometry("1280x800")
-        self.title("Scraper Configuration")
+        self.geometry("1280x720")
+        self.title("Scraping")
         self.iconbitmap("assets/icon.ico")
         self.configure(padx=10, pady=10)
 
@@ -136,8 +136,7 @@ class App(tk.Tk):
     def _show_info(self):
         top = tk.Toplevel(self)
         top.title("Informations")
-        ttk.Label(top, text="Informations détaillées à remplir...").pack(padx=20, pady=20)
-
+        ttk.Label(top, text="Detailed information to be filled in...").pack(padx=20, pady=20)
 
 
     def log(self, message):
@@ -169,17 +168,17 @@ class App(tk.Tk):
             if key == "forceScraping":
                 if value:
                     self.log(f"  → {key}: {value}")
-                    self.log("[WARNING] You are using the ForceScrapping option. Make sure you know what you are doing.")
+                    self.log("\n[WARNING] You are using the ForceScraping option. Make sure you know what you are doing.")
                 else:
                     value = False
                     self.log(f"  → {key}: {value}")
             elif value:
                 self.log(f"  → {key}: {value}")
             elif key == "dbPath" or key == "excelPath":
-                self.log(f"  → {key}: -- Not precised. The data will not be saved this file. --")
+                self.log(f"  → {key}: -- Not specified. The data will not be saved to this file. --")
             else:
-                self.log(f"[ERROR] Missing field. You forgot to precise '{key}', please check the configuration.")
-                messagebox.showwarning("Field require", "Please enter every informations before starting the program.")
+                self.log(f"[ERROR] Missing field. You forgot to specify '{key}'. Please check the configuration.")
+                messagebox.showwarning("Field required", "Please enter all required information before starting the program.")
                 self.start_button.config(state="normal")
                 return
 
@@ -188,15 +187,14 @@ class App(tk.Tk):
         hrefs = scraper.get_all_product_links()
 
         if hrefs == []:
-            self.log("[Info] Unable to find products url on this site. If this error persist, maybe the website doesn't work with this script.")
-
+            self.log("[INFO] Unable to find product URLs on this site. If this error persists, the website may not be compatible with this script.")
 
         # Setup progress
         self.total_steps = len(hrefs)
         self.current_step = 0
         self.progress["maximum"] = self.total_steps
         self.progress["value"] = 0
-        self.progress_label.config(text=f"0 / {self.total_steps} products proceeded")
+        self.progress_label.config(text=f"0 / {self.total_steps} products processed")
 
         # Show progress UI
         self.progress_container.pack(fill="x", pady=(5, 0))
@@ -209,7 +207,7 @@ class App(tk.Tk):
         def callback():
             self.progress["maximum"] = total
             self.progress["value"] = current
-            self.progress_label.config(text=f"{current} / {total} products proceeded")
+            self.progress_label.config(text=f"{current} / {total} products processed")
 
             if current >= total:
                 self.start_button.config(state="normal")

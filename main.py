@@ -1,6 +1,7 @@
 ############################################################################
 #
 # Main python file for scrapping app. Using libraries from requirement.txt
+# EasyScrape - Not like gromoteur
 # Martin Hugo
 # 2025
 #
