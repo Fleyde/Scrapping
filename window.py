@@ -78,9 +78,11 @@ class App(tk.Tk):
         launch_row = ttk.Frame(launch_frame)
         launch_row.pack(fill="x", pady=(0, 10))
 
-        ttk.Checkbutton(launch_row, text="Force scraping", variable=self.force_scraping_var).pack(side="left")
+        ttk.Checkbutton(launch_row, text="Force scraping", variable=self.force_scraping_var, command=self._toogle_force).pack(side="left")
         self.start_button = ttk.Button(launch_row, text="✅ Start Scraping", command=self.on_submit)
         self.start_button.pack(side="left", padx=20)
+        self.text_force = tk.Label(launch_row, text="Warning : you are currently using the 'force' option.", fg="orange", font=("Arial", 8))
+        # self.text_force.pack(side="left", padx=(0, 10))
 
         # === Progress bar container (invisible at first) ===
         self.progress_container = ttk.Frame(launch_frame)
@@ -119,6 +121,11 @@ class App(tk.Tk):
         ttk.Button(btn_frame, text="📂 Browse", command=lambda: self.browse_file(variable, type)).pack(side="left", padx=(0, 5))
         ttk.Button(btn_frame, text="➕ Create", command=lambda: self.create_file(variable, type)).pack(side="left")
 
+    def _toogle_force(self):
+        if self.force_scraping_var.get():
+            self.text_force.pack(side="left", padx=(0, 10))
+        else:
+            self.text_force.pack_forget()
 
 
     def browse_file(self, var, type):
@@ -177,7 +184,7 @@ class App(tk.Tk):
             elif key == "dbPath" or key == "excelPath":
                 self.log(f"  → {key}: -- Not specified. The data will not be saved to this file. --")
             else:
-                self.log(f"[ERROR] Missing field. You forgot to specify '{key}'. Please check the configuration.")
+                self.log(f"\n[ERROR] Missing field. You forgot to specify '{key}'. Please check the configuration.")
                 messagebox.showwarning("Field required", "Please enter all required information before starting the program.")
                 self.start_button.config(state="normal")
                 return
@@ -187,8 +194,10 @@ class App(tk.Tk):
         hrefs = scraper.get_all_product_links()
 
         if hrefs == []:
-            self.log("[INFO] Unable to find product URLs on this site. If this error persists, the website may not be compatible with this script.")
-
+            self.log("[ERROR] Unable to find product URLs on this site. If this error persists, the website may not be compatible with this script.")
+            self.start_button.config(state="normal")
+            return
+        
         # Setup progress
         self.total_steps = len(hrefs)
         self.current_step = 0

@@ -8,4 +8,4 @@ pyinstaller --onefile --name EasyScrape --add-data="assets;assets" --icon=assets
 
 
 example at : 
-****
+https://www.watch.co.uk/

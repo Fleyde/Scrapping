@@ -19,7 +19,7 @@ class Scraper():
     def __init__(self, data, log: callable, progress_callback=None):
         self.log_callback = log
         self.progress_callback = progress_callback
-        # self.cursor = cursor
+        self.headers = {}
 
         self.mainAddress = data["mainAddress"]
         self.productsKey = data["productsKey"]
@@ -32,6 +32,11 @@ class Scraper():
         self.dbPath = data["dbPath"]
         self.excelPath = data["excelPath"]
         self.forceScraping = data["forceScraping"]
+
+        if self.forceScraping:
+            self.headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
 
     def log(self, msg):
         if self.log_callback:
@@ -74,10 +79,10 @@ class Scraper():
         """
         This function returns all links for every product of the page corresponding to the `url_address`
         """
-        response = requests.get(self.mainAddress, verify=False)     # Change the verify value !!! Just for test here
+        response = requests.get(self.mainAddress, verify=False, headers=self.headers)     # Change the verify value !!! Just for test here
 
         if response.status_code != 200:
-            self.log(f"[ERROR] This site does not allow scraping. Please check the status code for more information: {response.status_code}")
+            self.log(f"\n[ERROR] This site does not allow scraping. Please check the status code for more information: {response.status_code}")
             return []
         
         soup = BeautifulSoup(response.content, "html.parser")
@@ -98,6 +103,16 @@ class Scraper():
         total = len(hrefs)
         count = 0
 
+        # Creating databse access in the same thread as the processing function
+        if self.dbPath:
+            self.conn = sqlite3.connect(self.dbPath)
+            self.cursor = self.conn.cursor()
+            self.cursor.execute('''CREATE TABLE IF NOT EXISTS products (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        product_name TEXT NOT NULL,
+                        html_content TEXT,
+                        date_added DATE)''')
+            self.conn.commit()
 
         if self.excelPath:
             with open(self.excelPath, mode='a', newline='', encoding='utf-8') as file:
@@ -109,7 +124,7 @@ class Scraper():
 
                 for link in hrefs:
                     self.log(f"\n[INFO] Scraping URL : {link}")
-                    response = requests.get(link, verify=False)
+                    response = requests.get(link, verify=False, headers=self.headers)
 
                     if response.status_code != 200:
                         count += 1
@@ -131,14 +146,16 @@ class Scraper():
 
                         writer.writerow([productTitle, price, description, link, date.today().isoformat()])
 
-                        # if self.dbPath:
-                        #     self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
-                        #                     VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
-                        #     self.conn.commit()
+                        if self.dbPath:
+                            self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
+                                            VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
+                            self.conn.commit()
 
                     except AttributeError:
-                        self.log("[ERROR] /!\ Error with this link ...\n  →  You might need to handle it manually")
+                        self.log("[ERROR] /!\\ Error with this link ...\n  →  You might need to handle it manually")
                         links_error_count += 1
+                        count += 1
+                        self.update_progress(count, total)
                         continue
 
                     count += 1
@@ -148,7 +165,7 @@ class Scraper():
         else:
             for link in hrefs:
                 self.log(f"\n[INFO] Scraping URL : {link}")
-                response = requests.get(link, verify=False)
+                response = requests.get(link, verify=False, headers=self.headers)
 
                 if response.status_code != 200:
                     count += 1
@@ -168,20 +185,24 @@ class Scraper():
                     self.log(f"         → Product price : {price}")
                     self.log(f"         → Product description : {description[:500]}")
                     
-                    # if self.dbPath:
-                    #     self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
-                    #                     VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
-                    #     self.conn.commit()
+                    if self.dbPath:
+                        self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
+                                        VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
+                        self.conn.commit()
 
                 except AttributeError:
-                    self.log("[ERROR] /!\ Error with this link ...\n  →  You might need to handle it manually")
+                    self.log("[ERROR] /!\\ Error with this link ...\n  →  You might need to handle it manually")
                     links_error_count += 1
+                    count += 1
+                    self.update_progress(count, total)
                     continue
 
                 count += 1
                 self.update_progress(count, total)
                 time.sleep(delay)
 
+        if self.dbPath:
+            self.conn.close()
 
         self.log(f"\n\n[INFO] Task completed successfully.")
         self.log(f"[INFO]    → {links_error_count} errors were encountered.")
