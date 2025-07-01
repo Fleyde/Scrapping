@@ -6,15 +6,6 @@
 #
 ############################################################################
 
-import pyfiglet
-import time
-from bs4 import BeautifulSoup
-import requests
-from tqdm import tqdm
-from datetime import date
-import csv
-import re
-from urllib.parse import urljoin
 import sqlite3
 
 from window import App
@@ -35,21 +26,8 @@ from window import App
 
 
 if __name__ == "__main__":
-    window = App(screenName="Scrapping")
-    
+    window = App()
     window.mainloop()
-
-    # if hrefs == []:
-    #     print("[Info] Unable to find products url on this site. If this error persist, maybe the website doesn't work with this script.")
-    #     input("[Info] > Press enter to exit the program...")
-    #     exit()
-
-    nameBalise = input("\nHTML element for the product's name: ")
-    nameKey = input("Select the class name of the product's title: ")
-    priceBalise = input("\nHTML element for the product's price: ")
-    priceKey = input("Select the class name of the price: ")
-    descriptionBalise = input("\nHTML element for the product's description: ")
-    descriptionKey = input("Select the class name of the description: ")
     
     # conn = sqlite3.connect('database.db')
     # cursor = conn.cursor()
@@ -61,8 +39,5 @@ if __name__ == "__main__":
     #                     date_added DATE)''')
     # conn.commit()
 
-    process_product_links(hrefs, "result.csv", nameBalise, nameKey, priceBalise, priceKey, descriptionBalise, descriptionKey)
-
     # conn.close()
     
-    input("[Info] > Results were added to the result.csv file. Press enter to exit the program...")

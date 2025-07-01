@@ -1,6 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from scraper import Scraper
 
+EXCEL_TYPE = [("CSV files", "*.csv")]
+DATABASE_TYPE = [("Database files", "*.db")]
 
 class App(tk.Tk):
     def __init__(self):
@@ -64,8 +67,8 @@ class App(tk.Tk):
         self.db_path = tk.StringVar()
         self.excel_path = tk.StringVar()
 
-        self._add_file_selector(file_frame, 0, "Database file (.db):", self.db_path)
-        self._add_file_selector(file_frame, 1, "Excel file (.xlsx):", self.excel_path)
+        self._add_file_selector(file_frame, 0, "Database file (.db):", self.db_path, DATABASE_TYPE)
+        self._add_file_selector(file_frame, 1, "CSV data file (.csv):", self.excel_path, EXCEL_TYPE)
 
         # === New: Launch configuration frame ===
         launch_frame = ttk.LabelFrame(right_frame, text="🚀 Starting Configuration", padding=15)
@@ -105,7 +108,7 @@ class App(tk.Tk):
         info_btn = ttk.Button(parent, text="  ℹ️", width=3, command=self._show_info)
         info_btn.grid(row=row, column=2, padx=5)
 
-    def _add_file_selector(self, parent, row, label_text, variable):
+    def _add_file_selector(self, parent, row, label_text, variable, type):
         ttk.Label(parent, text=label_text).grid(row=row, column=0, sticky="e", pady=5, padx=5)
         entry = ttk.Entry(parent, textvariable=variable, width=50, state="readonly")
         entry.grid(row=row, column=1, pady=5, padx=5)
@@ -113,18 +116,18 @@ class App(tk.Tk):
         btn_frame = ttk.Frame(parent)
         btn_frame.grid(row=row, column=2, padx=5)
 
-        ttk.Button(btn_frame, text="📂 Browse", command=lambda: self.browse_file(variable)).pack(side="left", padx=(0, 5))
-        ttk.Button(btn_frame, text="➕ Create", command=lambda: self.create_file(variable)).pack(side="left")
+        ttk.Button(btn_frame, text="📂 Browse", command=lambda: self.browse_file(variable, type)).pack(side="left", padx=(0, 5))
+        ttk.Button(btn_frame, text="➕ Create", command=lambda: self.create_file(variable, type)).pack(side="left")
 
 
 
-    def browse_file(self, var):
-        file_path = filedialog.askopenfilename()
+    def browse_file(self, var, type):
+        file_path = filedialog.askopenfilename(filetypes=type)
         if file_path:
             var.set(file_path)
 
-    def create_file(self, var):
-        file_path = filedialog.asksaveasfilename(defaultextension=".db" if "db" in var._name else ".xlsx")
+    def create_file(self, var, type):
+        file_path = filedialog.asksaveasfilename(defaultextension=type[0][1][1:], filetypes=type)
         if file_path:
             var.set(file_path)
 
@@ -163,15 +166,33 @@ class App(tk.Tk):
 
         self.log("[INFO] Scraping will start with the following configuration :")
         for key, value in data.items():
-            self.log(f"  → {key}: {value}")
+            if key == "forceScraping":
+                if value:
+                    self.log(f"  → {key}: {value}")
+                    self.log("[WARNING] You are using the ForceScrapping option. Make sure you know what you are doing.")
+                else:
+                    value = False
+                    self.log(f"  → {key}: {value}")
+            elif value:
+                self.log(f"  → {key}: {value}")
+            elif key == "dbPath" or key == "excelPath":
+                self.log(f"  → {key}: -- Not precised. The data will not be saved this file. --")
+            else:
+                self.log(f"[ERROR] Missing field. You forgot to precise '{key}', please check the configuration.")
+                messagebox.showwarning("Field require", "Please enter every informations before starting the program.")
+                self.start_button.config(state="normal")
+                return
 
-        if not data["mainAddress"] or not data["productsKey"]:
-            messagebox.showwarning("Field require", "Please indicate main URL and CSS class for products blocks.")
-            # self.start_button.config(state="normal")
-            return
+        scraper = Scraper(data=data, log=self.log, progress_callback=self.update_progress)
+
+        hrefs = scraper.get_all_product_links()
+
+        if hrefs == []:
+            self.log("[Info] Unable to find products url on this site. If this error persist, maybe the website doesn't work with this script.")
+
 
         # Setup progress
-        self.total_steps = 41
+        self.total_steps = len(hrefs)
         self.current_step = 0
         self.progress["maximum"] = self.total_steps
         self.progress["value"] = 0
@@ -180,19 +201,21 @@ class App(tk.Tk):
         # Show progress UI
         self.progress_container.pack(fill="x", pady=(5, 0))
 
-        self.after(100, self.simulate_progress)
+        self.log("[INFO] Starting scraping ...")
+        scraper.start_scraping_thread(hrefs)
 
 
+    def update_progress(self, current, total):
+        def callback():
+            self.progress["maximum"] = total
+            self.progress["value"] = current
+            self.progress_label.config(text=f"{current} / {total} products proceeded")
 
-    def simulate_progress(self):
-        if self.current_step < self.total_steps:
-            self.current_step += 1
-            self.progress["value"] = self.current_step
-            self.progress_label.config(text=f"{self.current_step} / {self.total_steps} products proceeded")
-            self.after(150, self.simulate_progress)
-        else:
-            self.log("[INFO] Scraping done (simulation).")
-            self.start_button.config(state="normal")
+            if current >= total:
+                self.start_button.config(state="normal")
+
+        self.after(0, callback)
+
 
 if __name__ == "__main__":
     app = App()
