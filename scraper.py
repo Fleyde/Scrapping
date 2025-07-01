@@ -58,7 +58,11 @@ class Scraper():
 
     def complete_url_with_base(self, url_address: str, hrefs: list) -> list:
         """Complete every addresses contained in **hrefs** list with the base url from `url_address` if needed and returns the modified list"""
-        match = re.findall(r"http[s]?://[^/]+", url_address)
+        try:
+            match = re.findall(r"http[s]?://[^/]+", url_address)
+        except AttributeError:
+            self.log(f"\n[ERROR] The given URL isn't valid : {url_address}")
+            return []
 
         if not match:
             self.log(f"[INFO] Failed to extract the base URL from the address '{url_address}'.")
@@ -79,7 +83,11 @@ class Scraper():
         """
         This function returns all links for every product of the page corresponding to the `url_address`
         """
-        response = requests.get(self.mainAddress, verify=False, headers=self.headers)     # Change the verify value !!! Just for test here
+        try:
+            response = requests.get(self.mainAddress, verify=False, headers=self.headers)     # Change the verify value !!! Just for test here
+        except:
+            self.log(f"\n[ERROR] The given URL isn't valid : {self.mainAddress}")
+            return []
 
         if response.status_code != 200:
             self.log(f"\n[ERROR] This site does not allow scraping. Please check the status code for more information: {response.status_code}")
