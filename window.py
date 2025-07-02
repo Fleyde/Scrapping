@@ -13,6 +13,8 @@ class App(tk.Tk):
         self.title("Scraping")
         self.iconbitmap("assets/icon.ico")
         self.configure(padx=10, pady=10)
+        self.scraper = None
+        self.is_pause = False
 
         self.create_widgets()
 
@@ -78,14 +80,25 @@ class App(tk.Tk):
         launch_row = ttk.Frame(launch_frame)
         launch_row.pack(fill="x", pady=(0, 10))
 
-        ttk.Checkbutton(launch_row, text="Force scraping", variable=self.force_scraping_var, command=self._toogle_force).pack(side="left")
+        ttk.Checkbutton(launch_row, text="Force scraping", variable=self.force_scraping_var, command=self._toogle_force).pack(side="left", padx=(0,10))
         self.start_button = ttk.Button(launch_row, text="✅ Start Scraping", command=self.on_submit)
-        self.start_button.pack(side="left", padx=20)
-        self.text_force = tk.Label(launch_row, text="Warning : you are currently using the 'force' option.", fg="orange", font=("Arial", 8))
-        # self.text_force.pack(side="left", padx=(0, 10))
+        self.start_button.pack(side="left", padx=5)
+
+        self.pause_button = ttk.Button(launch_row, text="⏸️ Pause Scraping", command=self.handle_pause)
+        self.pause_button.pack(side="left", padx=5)
+        self.pause_button.config(state="disabled")
+
+        self.stop_button = ttk.Button(launch_row, text="❌ Stop Scraping", command=self.handle_cancel)
+        self.stop_button.pack(side="left", padx=5)
+        self.stop_button.config(state="disabled")
+
+        warn_message_container = tk.Frame(launch_frame, height=20)
+        warn_message_container.pack(fill='x')
+        self.text_force = tk.Label(warn_message_container, text="Warning : you are currently using the 'force' option.", fg="orange", font=("Arial", 8))
 
         # === Progress bar container (invisible at first) ===
         self.progress_container = ttk.Frame(launch_frame)
+        self.progress_container.pack(fill="x", pady=(5, 0))
         # Not packing it yet
 
         self.progress = ttk.Progressbar(self.progress_container, orient="horizontal", mode="determinate", length=400)
@@ -123,7 +136,7 @@ class App(tk.Tk):
 
     def _toogle_force(self):
         if self.force_scraping_var.get():
-            self.text_force.pack(side="left", padx=(0, 10))
+            self.text_force.pack(side="left", padx=(0, 10), pady=0)
         else:
             self.text_force.pack_forget()
 
@@ -156,6 +169,8 @@ class App(tk.Tk):
 
     def on_submit(self):
         self.start_button.config(state="disabled")
+        self.stop_button.config(state="normal")
+        self.pause_button.config(state="normal")
         data = {
             "mainAddress": self.mainAddress_var.get(),
             "productsKey": self.productsKey_var.get(),
@@ -187,15 +202,19 @@ class App(tk.Tk):
                 self.log(f"\n[ERROR] Missing field. You forgot to specify '{key}'. Please check the configuration.")
                 messagebox.showwarning("Field required", "Please enter all required information before starting the program.")
                 self.start_button.config(state="normal")
+                self.stop_button.config(state="disabled")
+                self.pause_button.config(state="disabled")
                 return
 
-        scraper = Scraper(data=data, log=self.log, progress_callback=self.update_progress)
+        self.scraper = Scraper(data=data, log=self.log, progress_callback=self.update_progress)
 
-        hrefs = scraper.get_all_product_links()
+        hrefs = self.scraper.get_all_product_links()
 
         if hrefs == []:
             self.log("[ERROR] Unable to find product URLs on this site. If this error persists, the website may not be compatible with this script.")
             self.start_button.config(state="normal")
+            self.stop_button.config(state="disabled")
+            self.pause_button.config(state="disabled")
             return
         
         # Setup progress
@@ -209,8 +228,24 @@ class App(tk.Tk):
         self.progress_container.pack(fill="x", pady=(5, 0))
 
         self.log("[INFO] Starting scraping ...")
-        scraper.start_scraping_thread(hrefs)
+        self.scraper.start_scraping_thread(hrefs)
 
+
+    def handle_cancel(self):
+        self.start_button.config(state="normal")
+        self.stop_button.config(state="disabled")
+        self.pause_button.config(state="disabled")
+        self.pause_button.config(text="⏸️ Pause Scraping")
+        self.scraper.stop_scraping_thread()
+
+    def handle_pause(self):
+        if (self.is_pause):
+           self.pause_button.config(text="⏸️ Pause Scraping")
+           self.scraper.resume_scraping_thread()
+        else:
+            self.pause_button.config(text="⏸️ Resume Scraping")
+            self.scraper.pause_scraping_thread()
+        self.is_pause = not self.is_pause
 
     def update_progress(self, current, total):
         def callback():
@@ -220,6 +255,7 @@ class App(tk.Tk):
 
             if current >= total:
                 self.start_button.config(state="normal")
+                self.stop_button.config(state="disabled")
 
         self.after(0, callback)
 

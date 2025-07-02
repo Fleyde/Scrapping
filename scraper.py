@@ -20,6 +20,8 @@ class Scraper():
         self.log_callback = log
         self.progress_callback = progress_callback
         self.headers = {}
+        self.stop_event = threading.Event()
+        self.pause_event = threading.Event()
 
         self.mainAddress = data["mainAddress"]
         self.productsKey = data["productsKey"]
@@ -49,12 +51,23 @@ class Scraper():
             self.progress_callback(current, total)
 
     def start_scraping_thread(self, hrefs):
+        self.pause_event.set()
         thread = threading.Thread(
             target=self.process_product_links,
-            args=(hrefs,)
+            args=(hrefs, self.stop_event, self.pause_event)
         )
         thread.daemon = True
         thread.start()
+
+    def stop_scraping_thread(self):
+        self.stop_event.set()
+        self.pause_event.set()
+
+    def pause_scraping_thread(self):
+        self.pause_event.clear()
+
+    def resume_scraping_thread(self):
+        self.pause_event.set()
 
     def complete_url_with_base(self, url_address: str, hrefs: list) -> list:
         """Complete every addresses contained in **hrefs** list with the base url from `url_address` if needed and returns the modified list"""
@@ -102,13 +115,13 @@ class Scraper():
         return hrefs
 
 
-    def process_product_links(self, hrefs: list, delay:float = 1) -> None:
+    def process_product_links(self, hrefs: list, stop_event: threading.Event, pause_event: threading.Event, delay:float = 1) -> None:
         """
         Uses every parameter to extract informations about each product from `hrefs` list using the different parameters and saves it in the `filename`
         file. 
         """
-        links_error_count = 0
         total = len(hrefs)
+        errors_link_list = []
         count = 0
 
         # Creating databse access in the same thread as the processing function
@@ -131,12 +144,21 @@ class Scraper():
                     writer.writerow(['Product Title', 'Price', 'Description', 'Product URL', 'Scrapping date'])
 
                 for link in hrefs:
+                    pause_event.wait() 
+                    if stop_event.is_set():
+                        self.log("\n[INFO] Scraping has been cancelled by the user.")
+                        if self.dbPath:
+                            self.conn.close()
+                        break
+                     
                     self.log(f"\n[INFO] Scraping URL : {link}")
                     response = requests.get(link, verify=False, headers=self.headers)
 
                     if response.status_code != 200:
                         count += 1
                         self.update_progress(count, total)
+                        errors_link_list.append(link)
+                        self.log(f"[ERROR] Unable to get the content of this page. Status code error : {response.status_code}")
                         continue
                     
                     soup = BeautifulSoup(response.content, "html.parser")
@@ -161,7 +183,7 @@ class Scraper():
 
                     except AttributeError:
                         self.log("[ERROR] /!\\ Error with this link ...\n  →  You might need to handle it manually")
-                        links_error_count += 1
+                        errors_link_list.append(link)
                         count += 1
                         self.update_progress(count, total)
                         continue
@@ -172,12 +194,21 @@ class Scraper():
 
         else:
             for link in hrefs:
+                pause_event.wait() 
+                if stop_event.is_set():
+                    self.log("\n[INFO] Scraping has been cancelled by the user.")
+                    if self.dbPath:
+                        self.conn.close()
+                    break
+                
                 self.log(f"\n[INFO] Scraping URL : {link}")
                 response = requests.get(link, verify=False, headers=self.headers)
 
                 if response.status_code != 200:
                     count += 1
                     self.update_progress(count, total)
+                    errors_link_list.append(link)
+                    self.log(f"[ERROR] Unable to get the content of this page. Status code error : {response.status_code}")
                     continue
 
                 soup = BeautifulSoup(response.content, "html.parser")
@@ -199,8 +230,8 @@ class Scraper():
                         self.conn.commit()
 
                 except AttributeError:
-                    self.log("[ERROR] /!\\ Error with this link ...\n  →  You might need to handle it manually")
-                    links_error_count += 1
+                    self.log("[ERROR] /!\\ Error with this link : unable to find informations on the page ... \n  →  You might need to handle it manually")
+                    errors_link_list.append(link)
                     count += 1
                     self.update_progress(count, total)
                     continue
@@ -213,7 +244,9 @@ class Scraper():
             self.conn.close()
 
         self.log(f"\n\n[INFO] Task completed successfully.")
-        self.log(f"[INFO]    → {links_error_count} errors were encountered.")
+        self.log(f"          → {len(errors_link_list)} errors were encountered out of {count} products.")
+        for link in errors_link_list:
+            self.log(f"                    → {link}")
         self.log("[INFO] Data has been automatically saved to the specified files. If no file was provided, nothing has been saved.")
 
 
