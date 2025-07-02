@@ -115,140 +115,109 @@ class Scraper():
         return hrefs
 
 
-    def process_product_links(self, hrefs: list, stop_event: threading.Event, pause_event: threading.Event, delay:float = 1) -> None:
+    def process_product_links(self, hrefs: list, stop_event: threading.Event, pause_event: threading.Event, delay: float = 1) -> None:
         """
-        Uses every parameter to extract informations about each product from `hrefs` list using the different parameters and saves it in the `filename`
-        file. 
+        Extracts product information from each URL in `hrefs` and optionally saves it to a CSV and/or SQLite DB.
         """
-        total = len(hrefs)
-        errors_link_list = []
-        count = 0
 
-        # Creating databse access in the same thread as the processing function
+        total = len(hrefs)
+        count = 0
+        error_links = []
+
+        # ───── 1. Setup database ─────
         if self.dbPath:
             self.conn = sqlite3.connect(self.dbPath)
             self.cursor = self.conn.cursor()
-            self.cursor.execute('''CREATE TABLE IF NOT EXISTS products (
-                        id INTEGER PRIMARY KEY AUTOINCREMENT,
-                        product_name TEXT NOT NULL,
-                        html_content TEXT,
-                        date_added DATE)''')
+            self.cursor.execute('''
+                CREATE TABLE IF NOT EXISTS products (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    product_name TEXT NOT NULL,
+                    html_content TEXT,
+                    date_added DATE
+                )
+            ''')
             self.conn.commit()
 
+        # ───── 2. Main loop ─────
+        def process_link(link, writer=None):
+            pause_event.wait()
+            if stop_event.is_set():
+                return False
+
+            self.log(f"\n[INFO] Scraping URL: {link}")
+            response = requests.get(link, verify=False, headers=self.headers)
+
+            if response.status_code != 200:
+                self.log(f"[ERROR] Unable to get content (status {response.status_code})")
+                error_links.append(link)
+                return True
+
+            soup = BeautifulSoup(response.content, "html.parser")
+            soup.prettify()
+
+            try:
+                title = soup.find(self.nameTag, class_=self.nameClass).get_text(separator=' ', strip=True)
+                price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
+                desc = soup.find(self.descriptionTag, class_=self.descriptionClass).get_text(separator=' ', strip=True)
+
+                self.log("[INFO] Information found:")
+                self.log(f"         → Product title: {title}")
+                self.log(f"         → Product price: {price}")
+                self.log(f"         → Product description: {desc[:500]}")
+
+                # Write to CSV
+                if writer:
+                    writer.writerow([title, price, desc, link, date.today().isoformat()])
+
+                # Write to DB
+                if self.dbPath:
+                    html = soup.body.get_text(" ", strip=True)
+                    self.cursor.execute(
+                        '''INSERT INTO products (product_name, html_content, date_added)
+                        VALUES (?, ?, ?)''',
+                        (title, html, date.today().isoformat())
+                    )
+                    self.conn.commit()
+
+            except AttributeError:
+                self.log("[ERROR] /!\\ Failed to parse the page. Check selectors.")
+                error_links.append(link)
+
+            return True
+
+        # ───── 3. CSV + scraping ─────
         if self.excelPath:
             with open(self.excelPath, mode='a', newline='', encoding='utf-8') as file:
-                writer = csv.writer(file, delimiter=";")
+                writer = csv.writer(file, delimiter=';')
 
-                file_empty = file.tell() == 0
-                if file_empty:
+                if file.tell() == 0:
                     writer.writerow(['Product Title', 'Price', 'Description', 'Product URL', 'Scrapping date'])
 
                 for link in hrefs:
-                    pause_event.wait() 
-                    if stop_event.is_set():
+                    if not process_link(link, writer):
                         self.log("\n[INFO] Scraping has been cancelled by the user.")
-                        if self.dbPath:
-                            self.conn.close()
                         break
-                     
-                    self.log(f"\n[INFO] Scraping URL : {link}")
-                    response = requests.get(link, verify=False, headers=self.headers)
-
-                    if response.status_code != 200:
-                        count += 1
-                        self.update_progress(count, total)
-                        errors_link_list.append(link)
-                        self.log(f"[ERROR] Unable to get the content of this page. Status code error : {response.status_code}")
-                        continue
-                    
-                    soup = BeautifulSoup(response.content, "html.parser")
-                    soup.prettify()
-
-                    try:
-                        productTitle = soup.find(self.nameTag, class_=self.nameClass).get_text(separator=' ', strip=True)
-                        price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
-                        description = soup.find(self.descriptionTag, class_=self.descriptionClass).get_text(separator=' ', strip=True)
-
-                        self.log(f"[INFO] Information found : ")
-                        self.log(f"         → Product title : {productTitle}")
-                        self.log(f"         → Product price : {price}")
-                        self.log(f"         → Product description : {description[:500]}")
-
-                        writer.writerow([productTitle, price, description, link, date.today().isoformat()])
-
-                        if self.dbPath:
-                            self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
-                                            VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
-                            self.conn.commit()
-
-                    except AttributeError:
-                        self.log("[ERROR] /!\\ Error with this link ...\n  →  You might need to handle it manually")
-                        errors_link_list.append(link)
-                        count += 1
-                        self.update_progress(count, total)
-                        continue
-
                     count += 1
                     self.update_progress(count, total)
                     time.sleep(delay)
 
         else:
             for link in hrefs:
-                pause_event.wait() 
-                if stop_event.is_set():
+                if not process_link(link, None):
                     self.log("\n[INFO] Scraping has been cancelled by the user.")
-                    if self.dbPath:
-                        self.conn.close()
                     break
-                
-                self.log(f"\n[INFO] Scraping URL : {link}")
-                response = requests.get(link, verify=False, headers=self.headers)
-
-                if response.status_code != 200:
-                    count += 1
-                    self.update_progress(count, total)
-                    errors_link_list.append(link)
-                    self.log(f"[ERROR] Unable to get the content of this page. Status code error : {response.status_code}")
-                    continue
-
-                soup = BeautifulSoup(response.content, "html.parser")
-                soup.prettify()
-
-                try:
-                    productTitle = soup.find(self.nameTag, class_=self.nameClass).get_text(separator=' ', strip=True)
-                    price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
-                    description = soup.find(self.descriptionTag, class_=self.descriptionClass).get_text(separator=' ', strip=True)
-
-                    self.log(f"[INFO] Information found : ")
-                    self.log(f"         → Product title : {productTitle}")
-                    self.log(f"         → Product price : {price}")
-                    self.log(f"         → Product description : {description[:500]}")
-                    
-                    if self.dbPath:
-                        self.cursor.execute('''INSERT INTO products (product_name, html_content, date_added)
-                                        VALUES (?, ?, ?)''', (productTitle, str(soup.body.get_text(" ", strip=True)), date.today().isoformat()))
-                        self.conn.commit()
-
-                except AttributeError:
-                    self.log("[ERROR] /!\\ Error with this link : unable to find informations on the page ... \n  →  You might need to handle it manually")
-                    errors_link_list.append(link)
-                    count += 1
-                    self.update_progress(count, total)
-                    continue
-
                 count += 1
                 self.update_progress(count, total)
                 time.sleep(delay)
 
+        # ───── 4. Cleanup ─────
         if self.dbPath:
             self.conn.close()
 
-        self.log(f"\n\n[INFO] Task completed successfully.")
-        self.log(f"          → {len(errors_link_list)} errors were encountered out of {count} products.")
-        for link in errors_link_list:
-            self.log(f"                    → {link}")
-        self.log("[INFO] Data has been automatically saved to the specified files. If no file was provided, nothing has been saved.")
-
-
-
+        # ───── 5. Summary ─────
+        self.log("\n\n[INFO] Task completed successfully.")
+        self.log(f"[INFO]   → {len(error_links)} errors encountered out of {count} processed URLs.")
+        for link in error_links:
+            self.log(f"          → {link}")
+        self.log("[INFO] Data has been automatically saved to the specified files.")
 
