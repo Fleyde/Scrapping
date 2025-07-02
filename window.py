@@ -133,6 +133,10 @@ class App(tk.Tk):
 
         ttk.Button(btn_frame, text="📂 Browse", command=lambda: self.browse_file(variable, type)).pack(side="left", padx=(0, 5))
         ttk.Button(btn_frame, text="➕ Create", command=lambda: self.create_file(variable, type)).pack(side="left")
+        ttk.Button(btn_frame, text="✖", width=3, command=lambda: self.clear_file(variable)).pack(side="left")
+        
+    def clear_file(self, var:tk.StringVar):
+        var.set('')    
 
     def _toogle_force(self):
         if self.force_scraping_var.get():
@@ -140,13 +144,12 @@ class App(tk.Tk):
         else:
             self.text_force.pack_forget()
 
-
-    def browse_file(self, var, type):
+    def browse_file(self, var:tk.StringVar, type):
         file_path = filedialog.askopenfilename(filetypes=type)
         if file_path:
             var.set(file_path)
 
-    def create_file(self, var, type):
+    def create_file(self, var:tk.StringVar, type):
         file_path = filedialog.asksaveasfilename(defaultextension=type[0][1][1:], filetypes=type)
         if file_path:
             var.set(file_path)
