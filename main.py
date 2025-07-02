@@ -8,7 +8,6 @@
 ############################################################################
 
 from window import App
-# response = requests.get(mainAddress, headers=headers)
 
 if __name__ == "__main__":
     window = App()
