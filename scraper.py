@@ -155,6 +155,7 @@ class Scraper():
             soup = BeautifulSoup(response.content, "html.parser")
             soup.prettify()
 
+            title = price = desc = None
             try:
                 title = soup.find(self.nameTag, class_=self.nameClass).get_text(separator=' ', strip=True)
                 price = soup.find(self.priceTag, class_=self.priceClass).get_text(separator=' ', strip=True)
@@ -181,6 +182,12 @@ class Scraper():
 
             except AttributeError:
                 self.log("[ERROR] /!\\ Failed to parse the page. Check selectors.")
+                if not title:
+                    self.log(f"         → Unbale to find product title")
+                if not price:
+                    self.log(f"         → Unbale to find product price")
+                if not desc:
+                    self.log(f"         → Unbale to find product description")
                 error_links.append(link)
 
             return True
