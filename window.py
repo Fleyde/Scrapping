@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from scraper import Scraper
+from playwright.sync_api import sync_playwright
 
 EXCEL_TYPE = [("CSV files", "*.csv")]
 DATABASE_TYPE = [("Database files", "*.db")]
@@ -17,6 +18,11 @@ class App(tk.Tk):
         self.is_pause = False
 
         self.create_widgets()
+
+        # Setting up browser for scraping requests
+        self.p = sync_playwright().start()
+        self.browser = self.p.chromium.launch(headless=True)
+        self.context = self.browser.new_context()
 
     def create_widgets(self):
         container = ttk.Frame(self)
@@ -188,7 +194,7 @@ class App(tk.Tk):
             "forceScraping": self.force_scraping_var.get()
         }
 
-        self.log("[INFO] Scraping will start with the following configuration :")
+        self.log("\n[INFO] Scraping will start with the following configuration :")
         for key, value in data.items():
             if key == "forceScraping":
                 if value:
@@ -209,7 +215,7 @@ class App(tk.Tk):
                 self.pause_button.config(state="disabled")
                 return
 
-        self.scraper = Scraper(data=data, log=self.log, progress_callback=self.update_progress)
+        self.scraper = Scraper(data=data, context=self.context, log=self.log, progress_callback=self.update_progress)
 
         hrefs = self.scraper.get_all_product_links()
 
