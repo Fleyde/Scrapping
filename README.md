@@ -8,7 +8,7 @@ pyinstaller --onedir --name EasyScrape --add-data="assets;assets" --icon=assets/
 
 with cx_Freeze
 ````bash
-python .\setup.py build
+python .\setup.py build_exe --build-exe build/Scraping
 ````
 
 

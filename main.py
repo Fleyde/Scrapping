@@ -2,7 +2,6 @@
 #
 # Main python file for scrapping app. Using libraries from requirement.txt
 # EasyScrape - Not like gromoteur
-# Use this file only to create the executable file for this application
 # Martin Hugo
 # 2025
 #
@@ -10,7 +9,6 @@
 
 from window import App
 import os
-import pathlib
 import sys
 
 if getattr(sys, 'frozen', False):
