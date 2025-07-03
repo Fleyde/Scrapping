@@ -3,8 +3,14 @@ Scrapping application for research
 
 install command 
 ````bash
-pyinstaller --onefile --name EasyScrape --add-data="assets;assets" --icon=assets/icon.ico --noconsole .\window.py
+pyinstaller --onedir --name EasyScrape --add-data="assets;assets" --icon=assets/icon.ico --noconsole .\window.py
 ````
+
+with cx_Freeze
+````bash
+python .\setup.py build
+````
+
 
 
 example at : 
