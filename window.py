@@ -1,7 +1,9 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from scraper import Scraper
+import requests
 from playwright.sync_api import sync_playwright
+from config import *
 
 EXCEL_TYPE = [("CSV files", "*.csv")]
 DATABASE_TYPE = [("Database files", "*.db")]
@@ -18,11 +20,35 @@ class App(tk.Tk):
         self.is_pause = False
 
         self.create_widgets()
+        self.log("[INFO] Welcome to EasySrape, a scraping application designed for shopping websites.")
+        self.log("[INFO] You can find the source code at the following URL : https://api.github.com/repos/Fleyde/Scrapping/")
 
         # Setting up browser for scraping requests
         self.p = sync_playwright().start()
         self.browser = self.p.chromium.launch(headless=True)
         self.context = self.browser.new_context()
+        self.check_latest_version()
+
+        self.log("")
+
+
+    def check_latest_version(self):
+        self.log("[INFO] Checking for updates ...")
+        try:
+            response = requests.get("https://api.github.com/repos/Fleyde/Scrapping/releases/latest")
+            if response.status_code != 200:
+                self.log(f"\n[ERROR] Unable to check for lastest version on https://github.com/Fleyde/Scrapping/releases: {response.status_code}")
+                return
+            latest_version = response.json()['tag_name'][1:]
+            if latest_version != APP_VERSION:
+                new_version_message = "A new version is availabe on GitHub : https://github.com/Fleyde/Scrapping/releases"
+                self.log("[INFO] " + new_version_message)
+                messagebox.showinfo("Update available", message=new_version_message)
+                return
+            self.log("[INFO] Your application is up to date.")
+        except Exception as e:
+            self.log(f"[INFO] Impossible de vérifier la version : {e}")
+            
 
     def create_widgets(self):
         container = ttk.Frame(self)

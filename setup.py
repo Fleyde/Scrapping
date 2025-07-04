@@ -1,10 +1,8 @@
 from pathlib import Path
 from cx_Freeze import setup, Executable
 import sys, shutil
+from config import *
 
-# VAR
-APP_NAME = "EasyScrape"
-VERSION = "2.3.2"
 
 playwright_browser_path = str(Path.home() / "AppData" / "Local" / "ms-playwright")
 
@@ -21,8 +19,8 @@ base = "Win32GUI" if sys.platform == "win32" else None
 
 setup(
     name=APP_NAME,
-    version=VERSION,
-    description="Application created to scrape websites and get informations about articles",
+    version=APP_VERSION,
+    description=APP_DESCRIPTION,
     options={"build_exe": build_exe_options},
-    executables=[Executable("main.py", base=base, icon="assets/icon.ico", target_name=APP_NAME)]
+    executables=[Executable(APP_MAIN_FILE, base=base, icon=APP_ICON_PATH, target_name=APP_NAME)]
 )
