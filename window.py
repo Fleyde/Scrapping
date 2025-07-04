@@ -202,7 +202,7 @@ class App(tk.Tk):
 
 
     def on_submit(self):
-        if (self.excel_path):
+        if (self.excel_path.get() != ''):
             try:
                 with open(self.excel_path.get(), 'r+'):
                     pass
