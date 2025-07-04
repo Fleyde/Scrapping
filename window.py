@@ -158,6 +158,7 @@ class App(tk.Tk):
     def create_file(self, var:tk.StringVar, type):
         file_path = filedialog.asksaveasfilename(defaultextension=type[0][1][1:], filetypes=type)
         if file_path:
+            with open(file_path, 'w+'): pass
             var.set(file_path)
 
 
@@ -177,6 +178,14 @@ class App(tk.Tk):
 
 
     def on_submit(self):
+        if (self.excel_path):
+            try:
+                with open(self.excel_path.get(), 'r+'):
+                    pass
+            except IOError as io:
+                self.log(f"[ERROR] The CSV file that you want to use is already open or is unavailabe.\n{io}")
+                return
+
         self.start_button.config(state="disabled")
         self.stop_button.config(state="normal")
         self.pause_button.config(state="normal")
