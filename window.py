@@ -5,8 +5,6 @@ import requests
 from playwright.sync_api import sync_playwright
 from config import *
 
-EXCEL_TYPE = [("CSV files", "*.csv")]
-DATABASE_TYPE = [("Database files", "*.db")]
 
 class App(tk.Tk):
     def __init__(self):
@@ -21,7 +19,7 @@ class App(tk.Tk):
 
         self.create_widgets()
         self.log("[INFO] Welcome to EasySrape, a scraping application designed for shopping websites.")
-        self.log("[INFO] You can find the source code at the following URL : https://api.github.com/repos/Fleyde/Scrapping/")
+        self.log(f"[INFO] You can find the source code at the following URL : {APP_REPOT_LINK}")
 
         # Setting up browser for scraping requests
         self.p = sync_playwright().start()
