@@ -10,8 +10,3 @@ with cx_Freeze
 ````bash
 python .\setup.py build_exe --build-exe build/Scraping
 ````
-
-
-
-example at : 
-https://www.watch.co.uk/
