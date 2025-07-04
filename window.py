@@ -141,8 +141,16 @@ class App(tk.Tk):
         log_frame = ttk.LabelFrame(container, text="📄 Logs", padding=10)
         log_frame.pack(fill="both", expand=True, pady=(15, 10))
 
-        self.log_text = tk.Text(log_frame, state="disabled", background="#f4f4f4")
-        self.log_text.pack(fill="both", expand=True)
+        log_container = ttk.Frame(log_frame)
+        log_container.pack(fill="both", expand=True)
+
+        scrollbar = ttk.Scrollbar(log_container, orient="vertical")
+        scrollbar.pack(side="right", fill="y")
+
+        self.log_text = tk.Text(log_container, state="disabled", background="#f4f4f4", yscrollcommand=scrollbar.set)
+        self.log_text.pack(side="left", fill="both", expand=True)
+
+        scrollbar.config(command=self.log_text.yview)
 
 
     def _add_labeled_entry(self, parent, row, label_text, variable):

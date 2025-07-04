@@ -112,6 +112,7 @@ class Scraper():
                         else route.continue_())
 
             if headers:
+                    print("test")
                     page.set_extra_http_headers(headers)
             
             response = page.goto(self.mainAddress, wait_until="domcontentloaded", timeout=15000)
