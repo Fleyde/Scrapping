@@ -1,30 +1,28 @@
-Copyright (c) 2025 [Ton Nom ou Ton Organisation]
+Copyright © 2025 Martin Hugo
 
 All rights reserved.
 
-This software and its source code are provided for **personal and non-commercial use only** under the following conditions:
+This software is provided exclusively for **personal and non-commercial use**, under the following terms:
 
-1. **No Modification**  
-   You may not modify, adapt, translate, reverse engineer, decompile, disassemble, or create derivative works based on the software or any part of it.
+1. Modification Prohibited  
+   - You may not modify, alter, adapt, decompile, disassemble, or create derivative works from the source code or the software.
 
-2. **No Redistribution**  
-   You may not redistribute the software, in whole or in part, in any form (modified or unmodified), without express written permission.
+2. Redistribution Prohibited  
+   - You may not redistribute, republish, or host this software (in whole or in part), whether modified or not, without prior written permission.
 
-3. **No Commercial Use**  
-   Commercial use of this software is strictly prohibited. If you wish to use it for commercial purposes (internal tools, SaaS, client projects, etc.), you must obtain a commercial license by contacting the author.
+3. Commercial Use Forbidden  
+   - Use of this software in any commercial context (internal company use, client-facing applications, SaaS, etc.) is strictly prohibited unless you obtain a commercial license.
 
-4. **No Use in Derivative Works**  
-   This software may not be used as part of another software project, product, or tool, whether open-source or closed-source.
+4. Permitted Usage  
+   - Reading the code for evaluation or educational purposes.  
+   - Running the application for strictly personal and non-professional use.
 
-5. **Permitted Use**  
-   You are allowed to:
-   - View and read the source code for educational or evaluation purposes.
-   - Run the application as-is for personal, non-commercial purposes.
+5. Disclaimer of Warranty  
+   - This software is provided “as is”, without any warranties of any kind. The author shall not be held liable for any damages or losses arising from its use.
 
-6. **Liability Disclaimer**  
-   This software is provided "as is", without warranty of any kind, express or implied. In no event shall the author be liable for any claim, damages or other liability.
+---
 
-To request commercial use or licensing, please contact:
+💼 For commercial licensing or professional use requests, please contact:
 
-Martin Hugo  
+Martin Hugo 
 hugospb67@gmail.com
